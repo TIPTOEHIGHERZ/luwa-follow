@@ -7,6 +7,7 @@ from torchvision import transforms
 
 curr_dir = os.path.dirname(__file__)
 data_path = os.path.join(curr_dir, '..')
+torch.manual_seed(1234)
 
 
 def list2dict(l: list):
@@ -51,13 +52,15 @@ class BatchLoader:
 
         # shuffle the data
         shuffle_idx = torch.randperm(len(self.image_list))
-        # print(self.image_list)
         self.image_list = [self.image_list[idx] for idx in shuffle_idx]
         self.label_list = [self.label_list[idx] for idx in shuffle_idx]
+        idx = self.image_list.index('TRIBO_013_FLINT_BONE_3h_20X_065_001.bmp')
+        # print(idx, self.label_list[idx])
 
         labels_dict = list2dict(self.label_list)
         self.labels = torch.tensor([labels_dict[l] for l in self.label_list])
 
+        self.class_num = len(labels_dict.keys())
 
         return
 
@@ -70,7 +73,9 @@ class BatchLoader:
         images = list()
         trans = transforms.ToTensor()
         for i in range(len(image_names)):
-            image = Image.open(os.path.join(self.picture_path, f'{self.label_list[i]}'.lower(), image_names[i]))
+            image = Image.open(os.path.join(self.picture_path,
+                                            f'{self.label_list[batch_idx * self.batch_size + i]}'.lower(),
+                                            image_names[i]))
             image = trans(image).unsqueeze(0)
             images.append(image)
 
@@ -78,18 +83,26 @@ class BatchLoader:
 
         return images, labels
 
-
     def __iter__(self):
         return self
 
     def __next__(self):
-        pass
+        self.batch_idx += 1
+
+        if self.batch_idx >= self.total_len:
+            raise StopIteration
+
+        return self.get_batch(self.batch_idx)
 
     def __len__(self):
         return self.total_len
 
 
 if __name__ == '__main__':
+    import time
     batch_loader = BatchLoader(batch_size=32)
-    im, la = batch_loader.get_batch(0)
-    print(im.shape)
+
+    t = time.time()
+    for i, (im, la) in enumerate(batch_loader):
+        print(f'load {i}th batch\t', time.time() - t)
+        t = time.time()
