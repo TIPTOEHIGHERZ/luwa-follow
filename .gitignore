@@ -1,3 +1,4 @@
-LUWA/
+/LUWA
 *.pth
 *.zip
+__pycache__/

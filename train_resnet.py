@@ -25,6 +25,8 @@ def train(model: nn.Module,
     model.train()
 
     for epoch in range(epochs):
+        total_acc = 0.0
+        total_loss = 0.0
         for x, y in data:
             optimizer.zero_grad()
             x = x.to(device)
@@ -37,8 +39,11 @@ def train(model: nn.Module,
             optimizer.step()
 
             acc = calc_acc(y_pred, y)
+            total_acc += acc.item()
+            total_loss += loss.item()
+
             data.set_description(f'{epoch} / {epochs}: ')
-            data.set_postfix({'acc': acc.item(), 'loss': loss.item()})
+            data.set_postfix({'acc': acc / len(data_loader), 'loss': loss / len(data_loader)})
 
         if lr_scheduler:
             lr_scheduler.step()
@@ -63,5 +68,5 @@ optimizer = torch.optim.Adam(params=[
     {'params': resnet.fc.parameters(), 'lr': lr * 10}
 ], lr=lr)
 
-train(resnet, batch_loader, optimizer, epochs, device=device)
+train(resnet, data_loader, optimizer, epochs, device=device)
 
