@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+import tqdm
 from PIL import Image
 import os
 from torchvision import transforms
@@ -23,6 +24,8 @@ def list2dict(l: list):
 
 
 class BatchLoader:
+    transform = None
+
     def __init__(self, reso='256', train='train', mag='20x', size='6w', modality='texture', batch_size=32,
                  shuffle=False):
         assert mag in ['20x', '20x+50x', '50x']
@@ -65,6 +68,23 @@ class BatchLoader:
 
         return
 
+    def get_statistics(self):
+        means = torch.zeros([3])
+        stds = torch.zeros([3])
+
+        pbar = tqdm.tqdm(zip(self.image_list, self.label_list), total=len(self.image_list))
+
+        for image_name, label_name in pbar:
+            image = Image.open(os.path.join(self.picture_path, f'{label_name}'.lower(), image_name))
+            image = transforms.ToTensor()(image)
+            means += torch.mean(image, dim=(-1, -2))
+            stds += torch.std(image, dim=(-1, -2))
+
+        means /= len(self.image_list)
+        stds /= len(self.image_list)
+
+        return means, stds
+
     def get_batch(self, batch_idx):
         indices = range(batch_idx * self.batch_size, min((batch_idx + 1) * self.batch_size, len(self.image_list)))
 
@@ -83,6 +103,24 @@ class BatchLoader:
         images = torch.cat(images, dim=0)
 
         return images, labels
+
+    def prepare_transform(self, means, stds, mode='train'):
+        if mode == 'train':
+            self.transform = transforms.Compose([
+                transforms.Resize([224, 224]),
+                transforms.RandomRotation(5),
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=means, std=stds)
+            ])
+        else:
+            self.transform = transforms.Compose([
+                transforms.Resize([224, 224]),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=means, std=stds)
+            ])
+
+        return
 
     def __iter__(self):
         return self
@@ -105,6 +143,8 @@ class BatchLoader:
 
         image = Image.open(os.path.join(self.picture_path, f'{label_name}'.lower(), image_name))
         image = transforms.ToTensor()(image)
+        if self.transform is not None:
+            image = self.transform(image)
         return image, label
 
 

@@ -51,7 +51,10 @@ lr = 1e-4
 epochs = 1
 batch_size = 32
 batch_loader = BatchLoader()
+means, stds = batch_loader.get_statistics()
+batch_loader.prepare_transform(means, stds)
 data_loader = DataLoader(batch_loader, batch_size=batch_size, num_workers=4)
+print(f'total class num: {batch_loader.class_num}')
 resnet = load_resnet101(batch_loader.class_num)
 resnet.to(device)
 optimizer = torch.optim.Adam(params=[
