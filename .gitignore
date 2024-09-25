@@ -2,3 +2,5 @@
 *.pth
 *.zip
 __pycache__/
+checkpoints/
+
