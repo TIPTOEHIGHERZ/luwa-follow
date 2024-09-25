@@ -6,6 +6,7 @@ from typing import Callable
 from ResNet import load_resnet101
 from torch.utils.data import DataLoader
 from utils import calc_acc
+import os
 
 
 torch.manual_seed(1234)
@@ -48,6 +49,10 @@ if __name__ == '__main__':
     batch_loader = BatchLoader(train='test')
     data_loader = DataLoader(batch_loader, shuffle=True)
     resnet = load_resnet101(batch_loader.class_num, pretrained=False)
-    resnet.load_state_dict(torch.load('./checkpoints/ckpt_10.pth'))
+
+    ckpt_list = os.listdir('./checkpoints')
+    for ckpt in ckpt_list:
+        if len(ckpt) > 4 and ckpt[-4:] == '.pth':
+            resnet.load_state_dict(torch.load(f'./checkpoints/{ckpt}'))
 
     evaluate(resnet, data_loader)
