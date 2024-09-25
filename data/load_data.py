@@ -107,16 +107,16 @@ class BatchLoader:
     def prepare_transform(self, means, stds, mode='train'):
         if mode == 'train':
             self.transform = transforms.Compose([
-                transforms.Resize([224, 224]),
+                transforms.Resize([224, 224], antialias=True),
                 transforms.RandomRotation(5),
                 transforms.RandomHorizontalFlip(0.5),
-                transforms.ToTensor(),
+                # transforms.ToTensor(),
                 transforms.Normalize(mean=means, std=stds)
             ])
         else:
             self.transform = transforms.Compose([
                 transforms.Resize([224, 224]),
-                transforms.ToTensor(),
+                # transforms.ToTensor(),
                 transforms.Normalize(mean=means, std=stds)
             ])
 
@@ -134,7 +134,7 @@ class BatchLoader:
         return self.get_batch(self.batch_idx)
 
     def __len__(self):
-        return self.total_len
+        return len(self.image_list)
 
     def __getitem__(self, idx):
         image_name = self.image_list[idx]
@@ -145,6 +145,8 @@ class BatchLoader:
         image = transforms.ToTensor()(image)
         if self.transform is not None:
             image = self.transform(image)
+        # print(idx, '\t', label, '\n')
+        # print(label)
         return image, label
 
 
