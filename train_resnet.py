@@ -4,6 +4,7 @@ import tqdm
 from data import BatchLoader
 from typing import Callable
 from ResNet import load_resnet101
+from torch.utils.data import DataLoader
 
 
 def calc_acc(y_pred: torch.Tensor, y: torch.Tensor):
@@ -48,7 +49,9 @@ def train(model: nn.Module,
 device = 'cuda'
 lr = 1e-4
 epochs = 1
-batch_loader = BatchLoader(batch_size=32)
+batch_size = 32
+batch_loader = BatchLoader()
+data_loader = DataLoader(batch_loader, batch_size=batch_size, num_workers=4)
 resnet = load_resnet101(batch_loader.class_num)
 resnet.to(device)
 optimizer = torch.optim.Adam(params=[
@@ -56,4 +59,3 @@ optimizer = torch.optim.Adam(params=[
 ], lr=lr)
 
 train(resnet, batch_loader, optimizer, epochs, device=device)
-

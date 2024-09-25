@@ -23,7 +23,8 @@ def list2dict(l: list):
 
 
 class BatchLoader:
-    def __init__(self, reso='256', train='train', mag='20x', size='6w', modality='texture', batch_size=32):
+    def __init__(self, reso='256', train='train', mag='20x', size='6w', modality='texture', batch_size=32,
+                 shuffle=False):
         assert mag in ['20x', '20x+50x', '50x']
         assert size in ['6w', '9w']
         assert modality in ['texture', 'heightmap']
@@ -51,10 +52,10 @@ class BatchLoader:
         self.total_len = len(self.image_list) // batch_size + 1
 
         # shuffle the data
-        shuffle_idx = torch.randperm(len(self.image_list))
-        self.image_list = [self.image_list[idx] for idx in shuffle_idx]
-        self.label_list = [self.label_list[idx] for idx in shuffle_idx]
-        idx = self.image_list.index('TRIBO_013_FLINT_BONE_3h_20X_065_001.bmp')
+        if shuffle:
+            shuffle_idx = torch.randperm(len(self.image_list))
+            self.image_list = [self.image_list[idx] for idx in shuffle_idx]
+            self.label_list = [self.label_list[idx] for idx in shuffle_idx]
         # print(idx, self.label_list[idx])
 
         labels_dict = list2dict(self.label_list)
@@ -97,12 +98,22 @@ class BatchLoader:
     def __len__(self):
         return self.total_len
 
+    def __getitem__(self, idx):
+        image_name = self.image_list[idx]
+        label_name = self.label_list[idx]
+        label = self.labels[idx]
+
+        image = Image.open(os.path.join(self.picture_path, f'{label_name}'.lower(), image_name))
+        image = transforms.ToTensor()(image)
+        return image, label
+
 
 if __name__ == '__main__':
     import time
-    batch_loader = BatchLoader(batch_size=32)
+    from torch.utils.data import DataLoader
+    batch_loader = BatchLoader()
+    data_loader = DataLoader(batch_loader, batch_size=4, num_workers=4)
 
-    t = time.time()
-    for i, (im, la) in enumerate(batch_loader):
-        print(f'load {i}th batch\t', time.time() - t)
-        t = time.time()
+    for im, la in data_loader:
+        print(im.shape, la.shape)
+        break
