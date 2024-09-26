@@ -6,7 +6,7 @@ from typing import Callable
 from ResNet import load_resnet101
 from torch.utils.data import DataLoader
 from utils import calc_acc
-import os
+import os, pathlib
 
 
 torch.manual_seed(1234)
@@ -44,15 +44,24 @@ def evaluate(model: nn.Module,
 if __name__ == '__main__':
     device = 'cuda'
     lr = 1e-4
-    epochs = 50
     batch_size = 32
-    batch_loader = BatchLoader(train='test')
-    data_loader = DataLoader(batch_loader, shuffle=True)
+
+    meta_data = ['256', 'test', '20x', '6w', 'texture']
+
+    batch_loader = BatchLoader(*meta_data)
+    print(f'class num: {batch_loader.class_num}')
+    means, stds = torch.tensor([0.2249, 0.2249, 0.2249]), torch.tensor([0.1403, 0.1403, 0.1403])
+    batch_loader.prepare_transform(means, stds)
+    data_loader = DataLoader(batch_loader, shuffle=True, batch_size=batch_size)
     resnet = load_resnet101(batch_loader.class_num, pretrained=False)
 
-    ckpt_list = os.listdir('./checkpoints')
-    for ckpt in ckpt_list:
-        if len(ckpt) > 4 and ckpt[-4:] == '.pth':
-            resnet.load_state_dict(torch.load(f'./checkpoints/{ckpt}'))
+    meta_data[1] = 'train'
+    p = pathlib.Path(os.path.join(os.path.dirname(__file__), 'checkpoints', '_'.join(meta_data)))
+    ckpt_list = os.listdir(p)
 
-    evaluate(resnet, data_loader)
+    for ckpt in ckpt_list[0:]:
+        if len(ckpt) > 4 and ckpt[-4:] == '.pth':
+            resnet.load_state_dict(torch.load(p.joinpath(ckpt), weights_only=False))
+            # for param in resnet.fc.parameters():
+            #     print(param)
+            evaluate(resnet, data_loader)

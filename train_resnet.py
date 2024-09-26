@@ -6,6 +6,7 @@ from typing import Callable
 from ResNet import load_resnet101
 from torch.utils.data import DataLoader
 from utils import calc_acc
+import pathlib, os
 
 
 torch.manual_seed(1234)
@@ -18,7 +19,8 @@ def train(model: nn.Module,
           loss_fn: Callable = nn.CrossEntropyLoss(),
           lr_scheduler=None,
           device='cuda',
-          save_period=5):
+          save_period=5,
+          save_path=None):
     model.to(device)
     model.train()
 
@@ -51,7 +53,7 @@ def train(model: nn.Module,
             lr_scheduler.step()
 
         if (epoch + 1) % save_period == 0:
-            torch.save(model.state_dict(), f'./checkpoints/ckpt_{epoch}.pth')
+            torch.save(model.state_dict(), save_path.joinpath(f'ckpt_{epoch + 1}.pth'))
 
     return
 
@@ -61,7 +63,10 @@ if __name__ == '__main__':
     lr = 1e-4
     epochs = 50
     batch_size = 32
-    batch_loader = BatchLoader()
+
+    meta_data = ['256', 'train', '20x', '6w', 'texture']
+
+    batch_loader = BatchLoader(*meta_data)
     # means, stds = batch_loader.get_statistics()
     # print(means, stds)
     means, stds = torch.tensor([0.2249, 0.2249, 0.2249]), torch.tensor([0.1403, 0.1403, 0.1403])
@@ -69,10 +74,15 @@ if __name__ == '__main__':
     data_loader = DataLoader(batch_loader, batch_size=batch_size, num_workers=4, shuffle=True)
     print(f'total class num: {batch_loader.class_num}')
     resnet = load_resnet101(batch_loader.class_num)
+    # resnet.load_state_dict(torch.load('checkpoints/ckpt_49.pth', weights_only=False))
     resnet.to(device)
     optimizer = torch.optim.Adam(params=[
         {'params': resnet.fc.parameters(), 'lr': lr * 10}
     ], lr=lr)
 
-    train(resnet, data_loader, optimizer, epochs, device=device)
+    p = pathlib.Path(os.path.join(os.path.dirname(__file__), 'checkpoints'))
+    p.mkdir(exist_ok=True)
+    p = p.joinpath('_'.join(meta_data))
+    p.mkdir(exist_ok=True)
 
+    train(resnet, data_loader, optimizer, epochs, device=device, save_path=p, save_period=2)

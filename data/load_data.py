@@ -61,7 +61,8 @@ class BatchLoader:
             self.label_list = [self.label_list[idx] for idx in shuffle_idx]
         # print(idx, self.label_list[idx])
 
-        labels_dict = list2dict(self.label_list)
+        # labels_dict = list2dict(self.label_list)
+        labels_dict = {'ANTLER': 0, 'BEECHWOOD': 1, 'BEFOREUSE': 2, 'BONE': 3, 'IVORY': 4, 'SPRUCEWOOD': 5}
         self.labels = torch.tensor([labels_dict[l] for l in self.label_list])
 
         self.class_num = len(labels_dict.keys())
@@ -153,9 +154,8 @@ class BatchLoader:
 if __name__ == '__main__':
     import time
     from torch.utils.data import DataLoader
-    batch_loader = BatchLoader()
+    batch_loader = BatchLoader(train='test')
     data_loader = DataLoader(batch_loader, batch_size=4, num_workers=4)
-
     for im, la in data_loader:
         print(im.shape, la.shape)
         break
