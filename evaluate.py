@@ -4,6 +4,7 @@ import tqdm
 from data import BatchLoader
 from typing import Callable
 from ResNet import load_resnet101
+from ConvNext import load_convnext_base
 from torch.utils.data import DataLoader
 from utils import calc_acc
 import os, pathlib
@@ -42,8 +43,20 @@ def evaluate(model: nn.Module,
 
 
 if __name__ == '__main__':
+    import argparse
+
+    model_type = ['ConvNext', 'ResNet']
+
+    parser = argparse.ArgumentParser('train')
+    parser.add_argument('model_type',
+                        help=f'model type in {model_type}', type=str)
+
+    args = parser.parse_args()
+    if args.model_type not in model_type:
+        print('model not support')
+        exit(0)
+
     device = 'cuda'
-    lr = 1e-4
     batch_size = 32
 
     meta_data = ['256', 'test', '20x', '6w', 'texture']
@@ -53,15 +66,23 @@ if __name__ == '__main__':
     means, stds = torch.tensor([0.2249, 0.2249, 0.2249]), torch.tensor([0.1403, 0.1403, 0.1403])
     batch_loader.prepare_transform(means, stds)
     data_loader = DataLoader(batch_loader, shuffle=True, batch_size=batch_size)
-    resnet = load_resnet101(batch_loader.class_num, pretrained=False)
+
+    if args.model_type == 'ConvNext':
+        model = load_convnext_base(batch_loader.class_num)
+        last_layer = model.classifier[-1]
+    elif args.model_type == 'ResNet':
+        model = load_resnet101(batch_loader.class_num)
+        last_layer = model.fc
+
+    model.to(device)
 
     meta_data[1] = 'train'
-    p = pathlib.Path(os.path.join(os.path.dirname(__file__), 'checkpoints', '_'.join(meta_data)))
+    p = pathlib.Path(os.path.join(os.path.dirname(__file__), args.model_type, 'checkpoints', '_'.join(meta_data)))
     ckpt_list = os.listdir(p)
 
     for ckpt in ckpt_list[0:]:
         if len(ckpt) > 4 and ckpt[-4:] == '.pth':
-            resnet.load_state_dict(torch.load(p.joinpath(ckpt), weights_only=False))
+            model.load_state_dict(torch.load(p.joinpath(ckpt), weights_only=False))
             # for param in resnet.fc.parameters():
             #     print(param)
-            evaluate(resnet, data_loader)
+            evaluate(model, data_loader)
