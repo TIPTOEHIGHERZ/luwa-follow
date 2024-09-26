@@ -5,7 +5,7 @@ import argparse
 
 pswd = 'ustc.112233'
 ip = 'user@192.168.51.24:'
-base_dir = '/mnt/share/debug/zzy/'
+base_dir = '/mnt/share/debug/zzy'
 
 parser = argparse.ArgumentParser('upload')
 # parser.add_argument('-f', '--file', help='files to upload to server', type=str)
@@ -16,9 +16,11 @@ args = parser.parse_args()
 
 file_name = args.file
 
-dst = base_dir + args.dst if args.dst else '/mnt/share/debug/zzy/'
-if dst[-1] != '/':
-    dst += '/'
+work_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+dst = os.path.join(base_dir, work_dir, args.dst) if args.dst \
+    else os.path.join(base_dir, work_dir, os.path.dirname(file_name))
+# if dst[-1] != '/':
+#     dst += '/'
 dst = ip + dst
 
 if args.recursive:

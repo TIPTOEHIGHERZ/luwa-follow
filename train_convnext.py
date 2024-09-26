@@ -4,7 +4,7 @@ import torch.nn as nn
 import tqdm
 from data import BatchLoader
 from typing import Callable
-from ResNet import load_resnet101
+from ConvNext import load_convnext_base
 from torch.utils.data import DataLoader
 from utils import calc_acc
 import pathlib, os
@@ -74,11 +74,11 @@ if __name__ == '__main__':
     batch_loader.prepare_transform(means, stds)
     data_loader = DataLoader(batch_loader, batch_size=batch_size, num_workers=4, shuffle=True)
     print(f'total class num: {batch_loader.class_num}')
-    resnet = load_resnet101(batch_loader.class_num)
+    convnext = load_convnext_base(batch_loader.class_num)
     # resnet.load_state_dict(torch.load('checkpoints/ckpt_49.pth', weights_only=False))
-    resnet.to(device)
+    convnext.to(device)
     optimizer = torch.optim.Adam(params=[
-        {'params': resnet.fc.parameters(), 'lr': lr * 10}
+        {'params': convnext.classifier[-1].parameters(), 'lr': lr * 10}
     ], lr=lr)
 
     p = pathlib.Path(os.path.join(os.path.dirname(__file__), 'checkpoints'))
@@ -86,4 +86,5 @@ if __name__ == '__main__':
     p = p.joinpath('_'.join(meta_data))
     p.mkdir(exist_ok=True)
 
-    train(resnet, data_loader, optimizer, epochs, device=device, save_path=p, save_period=2)
+    train(convnext, data_loader, optimizer, epochs, device=device, save_path=p, save_period=2)
+

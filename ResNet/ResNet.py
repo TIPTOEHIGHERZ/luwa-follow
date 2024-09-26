@@ -7,7 +7,7 @@ import torchvision
 curr_dir = os.path.dirname(__file__)
 
 
-def load_resnet101(num_class: int, pretrained=True, device='cuda') -> nn.Module:
+def load_resnet101(num_class: int, pretrained=True, device='cuda'):
     resnet = torchvision.models.resnet101(weights=None)
     if pretrained:
         weights = torch.load(curr_dir + '/checkpoints/resnet101-63fe2227.pth', weights_only=False)

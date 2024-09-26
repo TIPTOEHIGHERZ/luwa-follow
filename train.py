@@ -4,6 +4,7 @@ import torch.nn as nn
 import tqdm
 from data import BatchLoader
 from typing import Callable
+from ConvNext import load_convnext_base
 from ResNet import load_resnet101
 from torch.utils.data import DataLoader
 from utils import calc_acc
@@ -60,6 +61,19 @@ def train(model: nn.Module,
 
 
 if __name__ == '__main__':
+    import argparse
+
+    model_type = ['ConvNext', 'ResNet']
+
+    parser = argparse.ArgumentParser('train')
+    parser.add_argument('model_type',
+                        help=f'model type in {model_type}', type=str)
+
+    args = parser.parse_args()
+    if args.model_type not in model_type:
+        print('model not support')
+        exit(0)
+
     device = 'cuda'
     lr = 1e-4
     epochs = 50
@@ -74,16 +88,23 @@ if __name__ == '__main__':
     batch_loader.prepare_transform(means, stds)
     data_loader = DataLoader(batch_loader, batch_size=batch_size, num_workers=4, shuffle=True)
     print(f'total class num: {batch_loader.class_num}')
-    resnet = load_resnet101(batch_loader.class_num)
+
+    if args.model_type == 'ConvNext':
+        model = load_convnext_base(batch_loader.class_num)
+        last_layer = model.classifier[-1]
+    elif args.model_type == 'ResNet':
+        model = load_resnet101(batch_loader.class_num)
+        last_layer = model.fc
     # resnet.load_state_dict(torch.load('checkpoints/ckpt_49.pth', weights_only=False))
-    resnet.to(device)
+    model.to(device)
     optimizer = torch.optim.Adam(params=[
-        {'params': resnet.fc.parameters(), 'lr': lr * 10}
+        {'params': last_layer.parameters(), 'lr': lr * 10}
     ], lr=lr)
 
-    p = pathlib.Path(os.path.join(os.path.dirname(__file__), 'checkpoints'))
+    p = pathlib.Path(os.path.join(os.path.dirname(__file__), args.model_type, 'checkpoints'))
     p.mkdir(exist_ok=True)
     p = p.joinpath('_'.join(meta_data))
     p.mkdir(exist_ok=True)
 
-    train(resnet, data_loader, optimizer, epochs, device=device, save_path=p, save_period=2)
+    train(model, data_loader, optimizer, epochs, device=device, save_path=p, save_period=2)
+
